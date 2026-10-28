@@ -20,6 +20,11 @@ const Presensi = sequelize.define(
       type: DataTypes.ENUM('hadir', 'izin', 'tidak_hadir'),
       allowNull: false,
     },
+    // bukti presensi dari kamera & GPS penghuni. Null untuk data hasil koreksi.
+    foto: DataTypes.STRING, // nama file di folder uploads/
+    latitude: DataTypes.DOUBLE,
+    longitude: DataTypes.DOUBLE,
+    akurasi: DataTypes.DOUBLE, // radius akurasi GPS dalam meter
   },
   {
     tableName: 'Presensi',

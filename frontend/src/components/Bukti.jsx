@@ -94,15 +94,16 @@ export function FileUpload({ value, onChange, error, onError }) {
   );
 }
 
-// Ambil file bukti (butuh token) lalu jadikan object URL
-function useBuktiUrl(izinId, aktif = true) {
+// Ambil file yang butuh token (bukti izin, foto presensi) lalu jadikan object URL
+// eslint-disable-next-line react-refresh/only-export-components
+export function useBlobUrl(path, aktif = true) {
   const [state, setState] = useState({ url: null, error: null });
   useEffect(() => {
-    if (!aktif) return;
+    if (!aktif || !path) return;
     let url;
     let alive = true;
     api
-      .blob(`/izin/${izinId}/bukti`)
+      .blob(path)
       .then((b) => {
         url = URL.createObjectURL(b);
         if (alive) setState({ url, error: null });
@@ -112,12 +113,12 @@ function useBuktiUrl(izinId, aktif = true) {
       alive = false;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [izinId, aktif]);
+  }, [path, aktif]);
   return state;
 }
 
 export function BuktiPreview({ izin, aktif = true }) {
-  const { url, error } = useBuktiUrl(izin.id, aktif);
+  const { url, error } = useBlobUrl(`/izin/${izin.id}/bukti`, aktif);
   const pdf = izin.buktiTipe?.includes('pdf');
   return (
     <div className="preview-frame">

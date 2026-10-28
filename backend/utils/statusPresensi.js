@@ -42,6 +42,11 @@ async function muatStatus(userIds, dari, sampai, now = sekarang()) {
     return {
       status: hitungStatus({ record, adaIzin, tanggal, sesi, now }),
       waktu: record ? record.waktu : null,
+      presensiId: record ? record.id : null,
+      adaFoto: Boolean(record?.foto),
+      latitude: record?.latitude ?? null,
+      longitude: record?.longitude ?? null,
+      akurasi: record?.akurasi ?? null,
     };
   };
 }

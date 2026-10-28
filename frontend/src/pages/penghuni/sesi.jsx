@@ -5,6 +5,7 @@ import { api } from '../../api';
 import { useElapsed, useFetch } from '../../lib/hooks';
 import { durasi, jamMenit, SESI_LABEL, tglPanjang } from '../../lib/format';
 import { Badge, Button, Modal } from '../../components/ui';
+import { FotoPresensi, LokasiInfo } from '../../components/Kamera';
 
 const tambahDetik = (jam, detik) => {
   const [h, m, s] = jam.split(':').map(Number);
@@ -138,18 +139,29 @@ export function DetailPresensiModal({ item, onClose }) {
   return (
     <Modal open={Boolean(item)} onClose={onClose} title="Detail Presensi" footer={<Button onClick={onClose}>Tutup</Button>}>
       {item && (
-        <dl className="info-list">
-          <dt>Tanggal</dt>
-          <dd>{tglPanjang(item.tanggal)}</dd>
-          <dt>Sesi</dt>
-          <dd>Presensi {SESI_LABEL[item.sesi]}</dd>
-          <dt>Waktu Presensi</dt>
-          <dd>{item.waktu ? `${jamMenit(item.waktu)} WIB` : '-'}</dd>
-          <dt>Status</dt>
-          <dd>
-            <Badge status={item.status} />
-          </dd>
-        </dl>
+        <div className="stack" style={{ gap: 16 }}>
+          {item.presensiId && <FotoPresensi presensiId={item.presensiId} adaFoto={item.adaFoto} />}
+          <dl className="info-list">
+            <dt>Tanggal</dt>
+            <dd>{tglPanjang(item.tanggal)}</dd>
+            <dt>Sesi</dt>
+            <dd>Presensi {SESI_LABEL[item.sesi]}</dd>
+            <dt>Waktu Presensi</dt>
+            <dd>{item.waktu ? `${jamMenit(item.waktu)} WIB` : '-'}</dd>
+            <dt>Status</dt>
+            <dd>
+              <Badge status={item.status} />
+            </dd>
+            {item.presensiId && (
+              <>
+                <dt>Lokasi</dt>
+                <dd>
+                  <LokasiInfo latitude={item.latitude} longitude={item.longitude} akurasi={item.akurasi} />
+                </dd>
+              </>
+            )}
+          </dl>
+        </div>
       )}
     </Modal>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ClipboardList, Eye, History, PencilLine, SearchX } from 'lucide-react';
+import { ClipboardList, Eye, History, MapPin, PencilLine, SearchX } from 'lucide-react';
+import { FotoPresensi, LokasiInfo } from '../../components/Kamera';
 import { api } from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -69,12 +70,19 @@ function DetailModal({ row, onClose, onKoreksi }) {
           </dl>
           <div className="grid grid-2" style={{ gap: 12 }}>
             {['pagi', 'malam'].map((s) => (
-              <div key={s} className="session-card" style={{ padding: 16, gap: 8 }}>
+              <div key={s} className="session-card" style={{ padding: 16, gap: 10 }}>
                 <div className="row between">
                   <span className="strong">Presensi {SESI_LABEL[s]}</span>
                   <Badge status={row[s].status} />
                 </div>
+                {row[s].presensiId && <FotoPresensi presensiId={row[s].presensiId} adaFoto={row[s].adaFoto} />}
                 <span className="muted">Waktu: {row[s].waktu ? `${jamMenit(row[s].waktu)} WIB` : '-'}</span>
+                {row[s].latitude != null && (
+                  <div className="row small" style={{ alignItems: 'flex-start', gap: 6 }}>
+                    <MapPin size={14} style={{ marginTop: 2, flexShrink: 0 }} />
+                    <LokasiInfo latitude={row[s].latitude} longitude={row[s].longitude} akurasi={row[s].akurasi} />
+                  </div>
+                )}
               </div>
             ))}
           </div>

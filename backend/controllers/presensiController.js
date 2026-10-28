@@ -1,4 +1,7 @@
+const fs = require('fs');
+const path = require('path');
 const { Op } = require('sequelize');
+const { UPLOAD_DIR } = require('../middlewares/upload');
 const { sequelize, User, Asrama, Presensi, KoreksiPresensi } = require('../models');
 const SESI = require('../config/sesi');
 const { SESI_KEYS, sekarang, statusSesi, sesiAktif } = require('../utils/waktu');
@@ -36,12 +39,23 @@ exports.hariIni = async (req, res, next) => {
   }
 };
 
-// POST /api/presensi (penghuni) — sesi ditentukan otomatis dari jam server
+// POST /api/presensi (penghuni, multipart: foto, latitude, longitude, akurasi)
+// Sesi & jam ditentukan dari jam server, bukan dari perangkat penghuni.
 exports.presensi = async (req, res, next) => {
   try {
     const now = sekarang();
     const sesi = sesiAktif(now);
     if (!sesi) throw httpError(400, 'Tidak ada sesi presensi yang sedang dibuka');
+    if (!req.file) throw httpError(400, 'Foto presensi wajib diambil dari kamera');
+    // foto dari kamera minimal beberapa KB; file sekecil ini berarti frame kosong
+    if (req.file.size < 2 * 1024) throw httpError(400, 'Foto tidak terbaca, silakan ambil ulang foto');
+
+    const latitude = Number(req.body.latitude);
+    const longitude = Number(req.body.longitude);
+    const akurasi = req.body.akurasi ? Number(req.body.akurasi) : null;
+    const lokasiValid =
+      req.body.latitude && req.body.longitude && Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180;
+    if (!lokasiValid) throw httpError(400, 'Lokasi GPS wajib diaktifkan saat presensi');
 
     const sudah = await Presensi.findOne({ where: { userId: req.user.id, tanggal: now.tanggal, sesi } });
     if (sudah) throw httpError(409, `Anda sudah melakukan ${SESI[sesi].label.toLowerCase()} hari ini`);
@@ -52,13 +66,40 @@ exports.presensi = async (req, res, next) => {
       sesi,
       waktu: now.jam,
       status: 'hadir',
+      foto: req.file.filename,
+      latitude,
+      longitude,
+      akurasi: Number.isFinite(akurasi) ? akurasi : null,
     });
     res.status(201).json({ success: true, data: presensi });
   } catch (err) {
+    // presensi gagal -> foto yang sudah terunggah tidak perlu disimpan
+    if (req.file) fs.rm(req.file.path, () => {});
     // unique index menolak dua request yang masuk bersamaan
     if (err.name === 'SequelizeUniqueConstraintError') {
       return next(httpError(409, 'Anda sudah melakukan presensi untuk sesi ini'));
     }
+    next(err);
+  }
+};
+
+// GET /api/presensi/:id/foto — penghuni pemilik, fasil asramanya, atau admin
+exports.foto = async (req, res, next) => {
+  try {
+    const presensi = await Presensi.findByPk(req.params.id, { include: { model: User, attributes: ['id', 'asramaId'] } });
+    const u = req.user;
+    const boleh =
+      presensi &&
+      (u.role === 'admin' ||
+        (u.role === 'penghuni' && presensi.userId === u.id) ||
+        (u.role === 'fasil' && (!u.asramaId || presensi.User.asramaId === u.asramaId)));
+    if (!boleh) throw httpError(404, 'Data presensi tidak ditemukan');
+    if (!presensi.foto) throw httpError(404, 'Presensi ini tidak memiliki foto');
+
+    const file = path.join(UPLOAD_DIR, path.basename(presensi.foto));
+    if (!fs.existsSync(file)) throw httpError(404, 'File foto tidak ditemukan');
+    res.sendFile(file);
+  } catch (err) {
     next(err);
   }
 };

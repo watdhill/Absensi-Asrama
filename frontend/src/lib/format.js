@@ -64,7 +64,9 @@ export function waktuRelatif(ts) {
   return `${Math.floor(detik / 86400)} hari lalu`;
 }
 
-export const jamMenit = (jam) => (jam ? jam.slice(0, 5) : '-');
+export const koordinat = (lat, lng) => `${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`;
+
+export const jamMenit =(jam) => (jam ? jam.slice(0, 5) : '-');
 
 export function durasi(detik) {
   const s = Math.max(0, Math.floor(detik));

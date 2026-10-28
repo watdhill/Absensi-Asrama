@@ -56,6 +56,9 @@ Akun hasil seed, semua dengan password `password123`:
 - Status yang tidak tersimpan di tabel dihitung saat dibaca
   (`utils/statusPresensi.js`): ada izin disetujui → **Izin**, sesi sudah lewat →
   **Tidak Hadir**, selain itu **Belum Presensi**.
+- Presensi wajib menyertakan foto dari kamera dan lokasi GPS. Jam, tanggal, dan
+  sesi diambil dari server; frontend mencetak info tersebut beserta koordinat
+  di bagian bawah foto.
 - Koreksi oleh fasil wajib menyertakan alasan dan dicatat di tabel `KoreksiPresensi`.
 - Fasil hanya melihat dan mengoreksi penghuni di asramanya sendiri.
 
@@ -70,7 +73,8 @@ Semua endpoint selain login membutuhkan header `Authorization: Bearer <token>`.
 | PUT | `/api/auth/profile` | semua | ubah nama, email, telepon |
 | PUT | `/api/auth/password` | semua | `{ passwordLama, passwordBaru }` |
 | GET | `/api/presensi/hari-ini` | penghuni | status kedua sesi hari ini |
-| POST | `/api/presensi` | penghuni | presensi pada sesi yang sedang dibuka |
+| POST | `/api/presensi` | penghuni | multipart: `foto` (JPG/PNG dari kamera), `latitude`, `longitude`, `akurasi` — presensi pada sesi yang sedang dibuka |
+| GET | `/api/presensi/:id/foto` | semua | foto presensi (penghuni pemilik, fasil asramanya, admin) |
 | GET | `/api/presensi/saya?bulan=&sesi=&status=` | penghuni | riwayat + ringkasan |
 | GET | `/api/presensi?tanggal=&sesi=&status=&asramaId=&kamar=&q=` | fasil, admin | data presensi per penghuni |
 | PUT | `/api/presensi/koreksi` | fasil, admin | `{ userId, tanggal, sesi, status, alasan }` |

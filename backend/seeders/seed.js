@@ -124,7 +124,10 @@ async function seed() {
   // tabel contoh lama (Users & Tasks) dari template awal ikut dibersihkan
   await sequelize.query('DROP TABLE IF EXISTS "Tasks" CASCADE');
   await sequelize.sync({ force: true });
-  for (const f of fs.readdirSync(UPLOAD_DIR)) if (f.startsWith('seed-')) fs.rmSync(path.join(UPLOAD_DIR, f));
+  // foto presensi lama ikut dihapus karena tabel Presensi dikosongkan
+  for (const f of fs.readdirSync(UPLOAD_DIR)) {
+    if (f.startsWith('seed-') || f.startsWith('presensi-')) fs.rmSync(path.join(UPLOAD_DIR, f));
+  }
 
   const asrama = {};
   for (const [kode, nama, jenis] of [

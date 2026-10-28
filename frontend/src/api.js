@@ -77,7 +77,7 @@ async function request(path, { method = 'GET', body, query } = {}) {
 // Diambil sebagai blob lalu dibuat object URL.
 async function blob(path) {
   const res = await fetch(buildUrl(path), { headers: { Authorization: `Bearer ${getToken()}` } });
-  if (!res.ok) throw new Error('File bukti tidak dapat dibuka');
+  if (!res.ok) throw new Error('File tidak dapat dibuka');
   return res.blob();
 }
 
