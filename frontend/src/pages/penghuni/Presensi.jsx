@@ -38,7 +38,7 @@ function HasilPresensi({ hasil }) {
           <dd>{jamMenit(hasil.waktu)} WIB</dd>
           <dt>Lokasi</dt>
           <dd>
-            <LokasiInfo latitude={hasil.latitude} longitude={hasil.longitude} akurasi={hasil.akurasi} />
+            <LokasiInfo latitude={hasil.latitude} longitude={hasil.longitude} akurasi={hasil.akurasi} jarak={hasil.jarak} />
           </dd>
         </dl>
       </div>
@@ -131,6 +131,7 @@ export default function Presensi() {
         jam={hariIni.jam}
         tanggal={hariIni.tanggal}
         user={user}
+        lokasiAsrama={hariIni.lokasiAsrama}
       />
     </div>
   );

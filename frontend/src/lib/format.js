@@ -64,7 +64,16 @@ export function waktuRelatif(ts) {
   return `${Math.floor(detik / 86400)} hari lalu`;
 }
 
-export const koordinat = (lat, lng) => `${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`;
+// jarak dua titik GPS dalam meter (haversine), sama dengan perhitungan di backend
+export function jarakMeter(lat1, lon1, lat2, lon2) {
+  const rad = (d) => (d * Math.PI) / 180;
+  const a = Math.sin(rad(lat2 - lat1) / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(rad(lon2 - lon1) / 2) ** 2;
+  return 2 * 6371000 * Math.asin(Math.sqrt(a));
+}
+
+export const formatJarak = (m) => (m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1).replace('.', ',')} km`);
+
+export const koordinat =(lat, lng) => `${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`;
 
 export const jamMenit =(jam) => (jam ? jam.slice(0, 5) : '-');
 
@@ -115,7 +124,13 @@ export const STATUS = {
   nonaktif: { label: 'Tidak Aktif', tone: 'muted' },
 };
 
-export const JENIS_IZIN = ['Pulang Kampung', 'Keperluan Keluarga', 'Sakit', 'Kegiatan Kampus', 'Lainnya'];
+export const JENIS_ASRAMA = { putra: 'Putra', putri: 'Putri', internasional: 'Internasional' };
+
+// gedung putra untuk laki-laki, putri untuk perempuan, internasional keduanya
+export const gedungCocok = (jenis, jenisKelamin) =>
+  !jenisKelamin || jenis === 'internasional' || (jenis === 'putra' ? jenisKelamin === 'L' : jenisKelamin === 'P');
+
+export const JENIS_IZIN =['Pulang Kampung', 'Keperluan Keluarga', 'Sakit', 'Kegiatan Kampus', 'Lainnya'];
 
 // Program studi & fakultas UNAND untuk form penghuni
 export const PRODI = {

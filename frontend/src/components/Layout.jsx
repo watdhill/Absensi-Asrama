@@ -3,6 +3,8 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Bell,
   BellOff,
+  Building2,
+  FileSpreadsheet,
   ChevronDown,
   CircleCheck,
   CircleUser,
@@ -24,6 +26,7 @@ import { api } from '../api';
 import { inisial, ROLE_LABEL, waktuRelatif } from '../lib/format';
 import { useClickOutside } from '../lib/hooks';
 import { ConfirmDialog } from './ui';
+import logoUnand from '../assets/logo-unand.png';
 
 const NAV = {
   penghuni: [
@@ -36,12 +39,15 @@ const NAV = {
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/data-presensi', label: 'Data Presensi', icon: ClipboardCheck },
     { to: '/perizinan', label: 'Perizinan', icon: FileText },
+    { to: '/laporan', label: 'Laporan', icon: FileSpreadsheet },
   ],
   admin: [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/penghuni', label: 'Penghuni', icon: Users },
     { to: '/fasil', label: 'Fasil', icon: UserCog },
+    { to: '/asrama', label: 'Gedung & Kamar', icon: Building2 },
     { to: '/data-presensi', label: 'Presensi', icon: ClipboardCheck },
+    { to: '/laporan', label: 'Laporan', icon: FileSpreadsheet },
   ],
 };
 
@@ -53,6 +59,9 @@ const JUDUL = [
   ['/perizinan/', 'Detail Pengajuan Izin'],
   ['/perizinan', 'Perizinan'],
   ['/data-presensi', 'Data Presensi'],
+  ['/laporan', 'Laporan Kehadiran'],
+  ['/asrama/', 'Detail Gedung'],
+  ['/asrama', 'Gedung & Kamar'],
   ['/penghuni/tambah', 'Tambah Penghuni'],
   ['/penghuni/', 'Edit Penghuni'],
   ['/penghuni', 'Data Penghuni'],
@@ -78,12 +87,17 @@ function Notifikasi() {
   const close = useCallback(() => setOpen(false), []);
   useClickOutside(ref, close, open);
 
-  // dimuat ulang setiap pindah halaman, supaya jumlahnya selalu terbaru
+  // dimuat ulang setiap pindah halaman dan tiap menit, supaya pengingat presensi
+  // (sisa waktu sesi) tetap terbaru walau halaman dibiarkan terbuka
   useEffect(() => {
-    api
-      .get('/notifikasi')
-      .then((res) => setItems(res.data))
-      .catch(() => {});
+    const muat = () =>
+      api
+        .get('/notifikasi')
+        .then((res) => setItems(res.data))
+        .catch(() => {});
+    muat();
+    const t = setInterval(muat, 60 * 1000);
+    return () => clearInterval(t);
   }, [location.pathname]);
 
   return (
@@ -204,7 +218,9 @@ export default function Layout() {
     <div className="app">
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="brand">
-          <div className="brand-logo">UA</div>
+          <div className="brand-logo">
+            <img src={logoUnand} alt="Logo Universitas Andalas" />
+          </div>
           <div>
             <div className="brand-name">ASRAMA UNAND</div>
             <div className="brand-sub">Sistem Absensi Penghuni</div>

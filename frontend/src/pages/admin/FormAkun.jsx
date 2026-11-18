@@ -4,7 +4,7 @@ import { ArrowLeft, Save } from 'lucide-react';
 import { api } from '../../api';
 import { useToast } from '../../context/ToastContext';
 import { useFetch } from '../../lib/hooks';
-import { PRODI } from '../../lib/format';
+import { gedungCocok, JENIS_ASRAMA, PRODI } from '../../lib/format';
 import { Button, ConfirmDialog, ErrorBox, Field, Loading, SuccessDialog } from '../../components/ui';
 import { AKUN } from './config';
 
@@ -74,13 +74,46 @@ export default function FormAkun({ role }) {
     setForm(Object.fromEntries(Object.keys(KOSONG).map((k) => [k, u[k] ?? ''])));
   }, [awal.data]);
 
+  // daftar kamar terdaftar di gedung yang dipilih, beserta penghuninya
+  const kamarQ = useFetch(
+    () => (role === 'penghuni' && form.asramaId ? api.get(`/asrama/${form.asramaId}/kamar`) : Promise.resolve(null)),
+    [form.asramaId]
+  );
+  const daftarAsrama = asrama.data?.data || [];
+  const gedung = daftarAsrama.find((a) => String(a.id) === String(form.asramaId));
+  const daftarKamar = (kamarQ.data?.data || []).filter((k) => k.terdaftar);
+  // saat edit, diri sendiri tidak dihitung sebagai isi kamar
+  const isiLain = (k) => k.penghuni.filter((p) => String(p.id) !== String(id));
+  const dataKamar = daftarKamar.find((k) => k.kamar === form.kamar);
+
+  // alasan sebuah kamar tidak bisa dipilih, atau null kalau bisa
+  const alasanTolak = (k) => {
+    const isi = isiLain(k);
+    if (isi.length >= k.kapasitas) return 'penuh';
+    const beda = isi.find((p) => form.jenisKelamin && p.jenisKelamin !== form.jenisKelamin);
+    if (beda) return `khusus ${beda.jenisKelamin === 'L' ? 'laki-laki' : 'perempuan'}`;
+    return null;
+  };
+
+  const masalahKamar = () => {
+    if (!gedung || !form.kamar) return null;
+    if (!dataKamar) return `Kamar ${form.kamar} tidak terdaftar di ${gedung.nama}`;
+    const alasan = alasanTolak(dataKamar);
+    return alasan ? `Kamar ${form.kamar} tidak bisa dipilih (${alasan})` : null;
+  };
+
   const set = (k) => (e) => {
     const value = e.target.value;
     const next = { ...form, [k]: value };
     if (k === 'prodi') next.fakultas = PRODI[value] || '';
-    if (k === 'asramaId' && role === 'penghuni') {
-      const a = asrama.data?.data.find((x) => String(x.id) === value);
-      if (a && !form.kamar) next.kamar = `${a.kode}-`;
+    if (role === 'penghuni') {
+      // ganti jenis kelamin -> gedung yang tidak sesuai dikosongkan
+      if (k === 'jenisKelamin' && gedung && !gedungCocok(gedung.jenis, value)) {
+        next.asramaId = '';
+        next.kamar = '';
+      }
+      // ganti gedung -> pilih ulang kamar dari gedung baru
+      if (k === 'asramaId') next.kamar = '';
     }
     setForm(next);
     if (errors[k]) setErrors({ ...errors, [k]: undefined });
@@ -91,6 +124,8 @@ export default function FormAkun({ role }) {
   const submit = (e) => {
     e.preventDefault();
     const v = validasi(form, role, edit);
+    const mk = role === 'penghuni' && masalahKamar();
+    if (mk && !v.kamar) v.kamar = mk;
     setErrors(v);
     if (Object.keys(v).length === 0) setKonfirmasi(true);
   };
@@ -108,13 +143,28 @@ export default function FormAkun({ role }) {
       // tandai field yang bermasalah kalau pesannya jelas
       if (/email/i.test(e2.message)) setErrors({ email: e2.message });
       if (/NIM|NIP/i.test(e2.message)) setErrors({ nomorInduk: e2.message });
+      if (/kamar|gedung|asrama/i.test(e2.message)) setErrors({ kamar: e2.message });
+      kamarQ.reload();
     }
   };
 
   if (edit && awal.error) return <ErrorBox message={awal.error} />;
   if (edit && !awal.data) return <Loading />;
 
-  const daftarAsrama = asrama.data?.data || [];
+  const labelGedung = (a) => `${a.nama} (${JENIS_ASRAMA[a.jenis]})`;
+  const gedungPilihan = daftarAsrama.filter(
+    (a) => gedungCocok(a.jenis, form.jenisKelamin) || String(a.id) === String(form.asramaId)
+  );
+  const tersedia = daftarKamar.filter((k) => !alasanTolak(k)).length;
+  const infoKamar = dataKamar
+    ? isiLain(dataKamar).length
+      ? `Terisi ${isiLain(dataKamar).length}/${dataKamar.kapasitas}: ${isiLain(dataKamar).map((p) => p.name).join(', ')}`
+      : `Kamar kosong (0/${dataKamar.kapasitas})`
+    : gedung
+      ? daftarKamar.length
+        ? `${tersedia} dari ${daftarKamar.length} kamar masih bisa ditempati`
+        : 'Gedung ini belum punya kamar terdaftar — tambahkan di menu Gedung & Kamar'
+      : 'Pilih gedung dulu';
 
   return (
     <div style={{ maxWidth: 860, margin: '0 auto' }}>
@@ -166,16 +216,27 @@ export default function FormAkun({ role }) {
             <Section no={2} title="Data Asrama">
               <Field label="Gedung" required error={errors.asramaId}>
                 <select className={`select ${err('asramaId')}`} value={form.asramaId} onChange={set('asramaId')}>
-                  <option value="">Pilih gedung asrama</option>
-                  {daftarAsrama.map((a) => (
+                  <option value="">{form.jenisKelamin ? 'Pilih gedung asrama' : 'Pilih jenis kelamin dulu'}</option>
+                  {gedungPilihan.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.nama}
+                      {labelGedung(a)}
                     </option>
                   ))}
                 </select>
               </Field>
-              <Field label="Kamar" required error={errors.kamar}>
-                <input className={`input ${err('kamar')}`} value={form.kamar} onChange={set('kamar')} placeholder="Contoh: A-203" />
+              <Field label="Kamar" required error={errors.kamar} hint={infoKamar}>
+                <select className={`select ${err('kamar')}`} value={form.kamar} onChange={set('kamar')} disabled={!gedung || !daftarKamar.length}>
+                  <option value="">{gedung ? 'Pilih kamar' : 'Pilih gedung dulu'}</option>
+                  {daftarKamar.map((k) => {
+                    const alasan = alasanTolak(k);
+                    const sekarang = k.kamar === awal.data?.data?.kamar && String(form.asramaId) === String(awal.data?.data?.asramaId);
+                    return (
+                      <option key={k.kamar} value={k.kamar} disabled={Boolean(alasan) && !sekarang}>
+                        {`${k.kamar} — ${isiLain(k).length}/${k.kapasitas}${alasan ? ` (${alasan})` : ''}`}
+                      </option>
+                    );
+                  })}
+                </select>
               </Field>
             </Section>
           </>
@@ -195,7 +256,7 @@ export default function FormAkun({ role }) {
                 <option value="">Pilih asrama yang ditugaskan</option>
                 {daftarAsrama.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.nama}
+                    {labelGedung(a)}
                   </option>
                 ))}
               </select>

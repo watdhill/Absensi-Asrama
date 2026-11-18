@@ -46,6 +46,7 @@ export function useSesiHariIni() {
     jam: data ? tambahDetik(data.jam, elapsed) : '--:--:--',
     sesi,
     sesiAktif: data?.sesiAktif,
+    lokasiAsrama: data?.lokasiAsrama,
   };
 }
 
@@ -156,7 +157,7 @@ export function DetailPresensiModal({ item, onClose }) {
               <>
                 <dt>Lokasi</dt>
                 <dd>
-                  <LokasiInfo latitude={item.latitude} longitude={item.longitude} akurasi={item.akurasi} />
+                  <LokasiInfo latitude={item.latitude} longitude={item.longitude} akurasi={item.akurasi} jarak={item.jarak} />
                 </dd>
               </>
             )}

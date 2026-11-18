@@ -7,6 +7,7 @@ const SESI = require('../config/sesi');
 const { SESI_KEYS, sekarang, statusSesi, sesiAktif } = require('../utils/waktu');
 const { muatStatus, riwayatPenghuni } = require('../utils/statusPresensi');
 const httpError = require('../utils/httpError');
+const { cekLokasi, geofenceAktif, MAKS_TOLERANSI } = require('../utils/geo');
 
 const STATUS_KOREKSI = ['hadir', 'izin', 'tidak_hadir'];
 
@@ -33,7 +34,17 @@ exports.hariIni = async (req, res, next) => {
         ...lookup(req.user.id, now.tanggal, key),
       };
     });
-    res.status(200).json({ success: true, data: { tanggal: now.tanggal, jam: now.jam, sesiAktif: sesiAktif(now), sesi } });
+    // titik & radius gedung, dipakai kamera untuk menampilkan jarak secara langsung
+    const a = req.user.Asrama;
+    const lokasiAsrama = {
+      aktif: geofenceAktif() && a?.latitude != null && a?.longitude != null,
+      nama: a?.nama || null,
+      latitude: a?.latitude ?? null,
+      longitude: a?.longitude ?? null,
+      radius: a?.radius ?? null,
+      toleransi: MAKS_TOLERANSI,
+    };
+    res.status(200).json({ success: true, data: { tanggal: now.tanggal, jam: now.jam, sesiAktif: sesiAktif(now), sesi, lokasiAsrama } });
   } catch (err) {
     next(err);
   }
@@ -57,6 +68,16 @@ exports.presensi = async (req, res, next) => {
       req.body.latitude && req.body.longitude && Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180;
     if (!lokasiValid) throw httpError(400, 'Lokasi GPS wajib diaktifkan saat presensi');
 
+    // geofence: harus berada dalam radius gedung asramanya
+    const asrama = req.user.Asrama;
+    const { jarak, dalamRadius } = cekLokasi(asrama, latitude, longitude, akurasi);
+    if (!dalamRadius) {
+      throw httpError(
+        403,
+        `Anda berada sekitar ${Math.round(jarak)} m dari ${asrama.nama}. Presensi hanya bisa dilakukan dalam radius ${asrama.radius} m.`
+      );
+    }
+
     const sudah = await Presensi.findOne({ where: { userId: req.user.id, tanggal: now.tanggal, sesi } });
     if (sudah) throw httpError(409, `Anda sudah melakukan ${SESI[sesi].label.toLowerCase()} hari ini`);
 
@@ -70,6 +91,7 @@ exports.presensi = async (req, res, next) => {
       latitude,
       longitude,
       akurasi: Number.isFinite(akurasi) ? akurasi : null,
+      jarak,
     });
     res.status(201).json({ success: true, data: presensi });
   } catch (err) {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Camera, ExternalLink, ImageOff, LocateFixed, MapPin, RotateCcw, Send, TriangleAlert } from 'lucide-react';
-import { hariTanggal, koordinat } from '../lib/format';
+import { formatJarak, hariTanggal, jarakMeter, koordinat } from '../lib/format';
 import { useBlobUrl } from './Bukti';
 import { Button, Loading, Modal } from './ui';
 
@@ -8,11 +8,12 @@ const MIN_LEBAR = 160; // piksel, di bawah ini frame kamera belum benar-benar si
 const linkMaps =(lat, lng) => `https://www.google.com/maps?q=${lat},${lng}`;
 
 // Koordinat + akurasi + tautan ke Google Maps
-export function LokasiInfo({ latitude, longitude, akurasi }) {
+export function LokasiInfo({ latitude, longitude, akurasi, jarak }) {
   if (latitude == null || longitude == null) return <span className="muted">-</span>;
   return (
     <span className="stack" style={{ gap: 2 }}>
       <span className="num">{koordinat(latitude, longitude)}</span>
+      {jarak != null && <span className="cell-sub">{formatJarak(jarak)} dari gedung asrama</span>}
       {akurasi != null && <span className="cell-sub">Akurasi ±{Math.round(akurasi)} m</span>}
       <a href={linkMaps(latitude, longitude)} target="_blank" rel="noreferrer" className="row small strong" style={{ gap: 4 }}>
         <ExternalLink size={13} /> Buka di Google Maps
@@ -83,7 +84,7 @@ function cetakCap(ctx, w, h, baris) {
 
 // Modal kamera untuk presensi: ambil selfie + lokasi GPS, lalu kirim.
 // `jam` dan `tanggal` berasal dari jam server yang sudah disinkronkan.
-export function KameraPresensi({ open, onClose, onSubmit, sesiLabel, jam, tanggal, user }) {
+export function KameraPresensi({ open, onClose, onSubmit, sesiLabel, jam, tanggal, user, lokasiAsrama }) {
   const video = useRef(null);
   const stream = useRef(null);
   const [kamera, setKamera] = useState({ status: 'memuat', error: null });
@@ -148,11 +149,17 @@ export function KameraPresensi({ open, onClose, onSubmit, sesiLabel, jam, tangga
   useEffect(() => () => foto && URL.revokeObjectURL(foto.url), [foto]);
 
   const c = gps.coords;
+  // jarak ke gedung asrama; aturan sama dengan backend (toleransi akurasi maks 50 m)
+  const geo = lokasiAsrama?.aktif && c ? jarakMeter(c.latitude, c.longitude, lokasiAsrama.latitude, lokasiAsrama.longitude) : null;
+  const diLuar = geo !== null && geo - Math.min(c.accuracy, lokasiAsrama.toleransi) > lokasiAsrama.radius;
+
   const baris = [
-    `${sesiLabel.toUpperCase()} • ASRAMA UNAND`,
+    `${sesiLabel.toUpperCase()} • ${(lokasiAsrama?.nama || 'ASRAMA UNAND').toUpperCase()}`,
     tanggal ? hariTanggal(tanggal) : '',
     `${jam} WIB`,
-    c ? `${koordinat(c.latitude, c.longitude)} (±${Math.round(c.accuracy)} m)` : 'Mencari lokasi...',
+    c
+      ? `${koordinat(c.latitude, c.longitude)} (±${Math.round(c.accuracy)} m)${geo !== null ? ` • ${formatJarak(geo)} dari gedung` : ''}`
+      : 'Mencari lokasi...',
     `${user.name} • ${user.nomorInduk || ''}`,
   ];
 
@@ -193,7 +200,7 @@ export function KameraPresensi({ open, onClose, onSubmit, sesiLabel, jam, tangga
     }
   };
 
-  const bisaAmbil = kamera.status === 'siap' && gps.status === 'ok';
+  const bisaAmbil = kamera.status === 'siap' && gps.status === 'ok' && !diLuar;
 
   return (
     <Modal
@@ -265,15 +272,23 @@ export function KameraPresensi({ open, onClose, onSubmit, sesiLabel, jam, tangga
           )}
         </div>
 
-        <div className={`alert ${gps.status === 'ok' ? 'tone-success' : gps.status === 'error' ? 'tone-danger' : 'tone-muted'}`}>
-          {gps.status === 'ok' ? <MapPin size={18} /> : gps.status === 'error' ? <TriangleAlert size={18} /> : <LocateFixed size={18} />}
+        <div className={`alert ${gps.status === 'ok' && !diLuar ? 'tone-success' : gps.status === 'mencari' ? 'tone-muted' : 'tone-danger'}`}>
+          {gps.status === 'ok' && !diLuar ? <MapPin size={18} /> : gps.status === 'mencari' ? <LocateFixed size={18} /> : <TriangleAlert size={18} />}
           <div>
             {gps.status === 'ok' && (
               <>
-                <div className="strong">Lokasi ditemukan</div>
-                <div className="small num">
-                  {koordinat(c.latitude, c.longitude)} • akurasi ±{Math.round(c.accuracy)} m
+                <div className="strong">
+                  {diLuar
+                    ? `Anda di luar area ${lokasiAsrama.nama}`
+                    : geo !== null
+                      ? `Lokasi sesuai — dalam area ${lokasiAsrama.nama}`
+                      : 'Lokasi ditemukan'}
                 </div>
+                <div className="small num">
+                  {geo !== null && `${formatJarak(geo)} dari gedung (batas ${lokasiAsrama.radius} m) • `}
+                  akurasi ±{Math.round(c.accuracy)} m
+                </div>
+                {diLuar && <div className="small">Mendekatlah ke gedung asrama untuk melakukan presensi.</div>}
               </>
             )}
             {gps.status === 'mencari' && 'Mencari lokasi GPS... izinkan akses lokasi jika diminta browser.'}

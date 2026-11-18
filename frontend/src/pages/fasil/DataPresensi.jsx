@@ -80,7 +80,7 @@ function DetailModal({ row, onClose, onKoreksi }) {
                 {row[s].latitude != null && (
                   <div className="row small" style={{ alignItems: 'flex-start', gap: 6 }}>
                     <MapPin size={14} style={{ marginTop: 2, flexShrink: 0 }} />
-                    <LokasiInfo latitude={row[s].latitude} longitude={row[s].longitude} akurasi={row[s].akurasi} />
+                    <LokasiInfo latitude={row[s].latitude} longitude={row[s].longitude} akurasi={row[s].akurasi} jarak={row[s].jarak} />
                   </div>
                 )}
               </div>

@@ -47,6 +47,7 @@ async function muatStatus(userIds, dari, sampai, now = sekarang()) {
       latitude: record?.latitude ?? null,
       longitude: record?.longitude ?? null,
       akurasi: record?.akurasi ?? null,
+      jarak: record?.jarak ?? null,
     };
   };
 }

@@ -1,3 +1,4 @@
+import process from 'node:process'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -9,7 +10,8 @@ export default defineConfig({
     host: true,
     // request ke /api diteruskan ke backend Express, jadi tidak perlu tulis URL lengkap
     proxy: {
-      '/api': 'http://localhost:5000',
+      // bisa diarahkan ke backend lain, misal: API_URL=http://localhost:5055 npm run dev
+      '/api': process.env.API_URL || 'http://localhost:5000',
     },
   },
 })

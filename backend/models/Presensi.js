@@ -25,6 +25,7 @@ const Presensi = sequelize.define(
     latitude: DataTypes.DOUBLE,
     longitude: DataTypes.DOUBLE,
     akurasi: DataTypes.DOUBLE, // radius akurasi GPS dalam meter
+    jarak: DataTypes.DOUBLE, // jarak ke titik gedung asrama saat presensi, meter
   },
   {
     tableName: 'Presensi',

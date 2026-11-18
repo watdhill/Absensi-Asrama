@@ -1,6 +1,7 @@
 const { Op } = require('sequelize');
 const { User, Asrama } = require('../models');
 const httpError = require('../utils/httpError');
+const { normalKamar, cekPenempatan } = require('../utils/kamar');
 
 // Data Penghuni dan Data Fasil (admin) punya alur CRUD yang sama, bedanya
 // hanya role dan kolom yang boleh diisi. Controller dibuat lewat factory ini.
@@ -69,7 +70,15 @@ module.exports = function akunController(role) {
     create: async (req, res, next) => {
       try {
         if (!req.body.password) throw httpError(400, 'Password wajib diisi');
-        const user = await User.create({ ...pick(req.body, FIELDS[role]), password: req.body.password, role });
+        const data = pick(req.body, FIELDS[role]);
+        if (role === 'penghuni') {
+          data.kamar = normalKamar(data.kamar);
+          if (!data.jenisKelamin || !data.asramaId || !data.kamar) {
+            throw httpError(400, 'Jenis kelamin, gedung, dan kamar wajib diisi');
+          }
+          await cekPenempatan(data);
+        }
+        const user = await User.create({ ...data, password: req.body.password, role });
         res.status(201).json({
           success: true,
           data: await cari(user.id),
@@ -86,6 +95,13 @@ module.exports = function akunController(role) {
         const user = await cari(req.params.id);
         const data = pick(req.body, FIELDS[role]);
         if (req.body.password) data.password = req.body.password;
+        // penghuni nonaktif tidak menempati kamar, jadi kapasitas tidak dicek
+        if (role === 'penghuni' && user.status === 'aktif') {
+          if (data.kamar !== undefined) data.kamar = normalKamar(data.kamar);
+          const baru = { asramaId: user.asramaId, kamar: user.kamar, jenisKelamin: user.jenisKelamin, ...data };
+          const pindah = ['asramaId', 'kamar', 'jenisKelamin'].some((k) => String(baru[k]) !== String(user[k]));
+          if (pindah) await cekPenempatan({ ...baru, kecualiId: user.id });
+        }
         await user.update(data);
         res.status(200).json({
           success: true,
@@ -103,6 +119,10 @@ module.exports = function akunController(role) {
         const { status } = req.body;
         if (!['aktif', 'nonaktif'].includes(status)) throw httpError(400, 'Status tidak valid');
         const user = await cari(req.params.id);
+        // mengaktifkan kembali = menempati kamarnya lagi, jadi kamar tidak boleh penuh
+        if (role === 'penghuni' && status === 'aktif' && user.status !== 'aktif') {
+          await cekPenempatan({ asramaId: user.asramaId, kamar: user.kamar, jenisKelamin: user.jenisKelamin, kecualiId: user.id });
+        }
         await user.update({ status });
         res.status(200).json({
           success: true,

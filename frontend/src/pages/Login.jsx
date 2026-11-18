@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, IdCard, KeyRound, Lock, Mail } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Button, ErrorBox, Field, Modal } from '../components/ui';
+import fotoAsrama from '../assets/asrama-unand.jpg';
+import logoUnand from '../assets/logo-unand.png';
 
 // akun hasil `npm run seed` di backend, untuk memudahkan demo
 const DEMO = [
@@ -10,58 +12,6 @@ const DEMO = [
   ['Fasil', 'hendra.fasil@unand.ac.id'],
   ['Admin', 'admin@unand.ac.id'],
 ];
-
-function IlustrasiAsrama() {
-  return (
-    <svg className="login-illustration" viewBox="0 0 460 300" fill="none" aria-hidden="true">
-      <ellipse cx="230" cy="280" rx="210" ry="14" fill="rgb(255 255 255 / 0.08)" />
-      {/* gedung utama */}
-      <rect x="110" y="70" width="240" height="210" rx="6" fill="#fff" />
-      <path d="M96 78 230 22l134 56z" fill="#F59E0B" />
-      <rect x="110" y="78" width="240" height="10" fill="#E5E7EB" />
-      {[0, 1, 2, 3].map((r) =>
-        [0, 1, 2, 3, 4].map((c) => (
-          <rect
-            key={`${r}-${c}`}
-            x={128 + c * 44}
-            y={102 + r * 40}
-            width="28"
-            height="24"
-            rx="3"
-            fill={(r + c) % 3 === 0 ? '#FDE68A' : '#BFD3EA'}
-          />
-        ))
-      )}
-      <rect x="208" y="236" width="44" height="44" rx="4" fill="#123B66" />
-      <rect x="216" y="244" width="12" height="36" fill="#1E5A91" />
-      <rect x="232" y="244" width="12" height="36" fill="#1E5A91" />
-      {/* sayap kiri & kanan */}
-      <rect x="30" y="140" width="80" height="140" rx="4" fill="rgb(255 255 255 / 0.85)" />
-      <rect x="350" y="140" width="80" height="140" rx="4" fill="rgb(255 255 255 / 0.85)" />
-      {[0, 1, 2].map((r) => (
-        <g key={r}>
-          <rect x="46" y={158 + r * 38} width="20" height="20" rx="3" fill="#BFD3EA" />
-          <rect x="76" y={158 + r * 38} width="20" height="20" rx="3" fill="#BFD3EA" />
-          <rect x="366" y={158 + r * 38} width="20" height="20" rx="3" fill="#BFD3EA" />
-          <rect x="396" y={158 + r * 38} width="20" height="20" rx="3" fill="#FDE68A" />
-        </g>
-      ))}
-      {/* pohon */}
-      <circle cx="18" cy="236" r="22" fill="#16A34A" opacity=".85" />
-      <rect x="15" y="250" width="6" height="30" fill="#7c4a1d" />
-      <circle cx="446" cy="230" r="26" fill="#16A34A" opacity=".85" />
-      <rect x="443" y="248" width="6" height="32" fill="#7c4a1d" />
-      {/* mahasiswa */}
-      <circle cx="170" cy="246" r="8" fill="#F8D3B0" />
-      <rect x="162" y="256" width="16" height="24" rx="6" fill="#1E5A91" />
-      <circle cx="290" cy="246" r="8" fill="#F8D3B0" />
-      <rect x="282" y="256" width="16" height="24" rx="6" fill="#F59E0B" />
-      {/* tanda centang presensi */}
-      <circle cx="380" cy="70" r="30" fill="#16A34A" />
-      <path d="m366 70 10 10 19-20" stroke="#fff" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 export default function Login() {
   const { login } = useAuth();
@@ -95,16 +45,17 @@ export default function Login() {
 
   return (
     <div className="login">
-      <section className="login-brand">
+      <section className="login-brand" style={{ '--foto': `url(${fotoAsrama})` }}>
         <div className="brand" style={{ padding: 0 }}>
-          <div className="brand-logo">UA</div>
+          <div className="brand-logo">
+            <img src={logoUnand} alt="Logo Universitas Andalas" />
+          </div>
           <div>
             <div className="brand-name">ASRAMA UNAND</div>
             <div className="brand-sub">Universitas Andalas</div>
           </div>
         </div>
         <div>
-          <IlustrasiAsrama />
           <h1>Sistem Absensi Penghuni Asrama</h1>
           <p className="lead">Universitas Andalas</p>
         </div>

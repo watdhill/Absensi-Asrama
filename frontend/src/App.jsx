@@ -16,6 +16,9 @@ import PerizinanFasil from './pages/fasil/Perizinan'
 import DashboardAdmin from './pages/admin/Dashboard'
 import DataAkun from './pages/admin/DataAkun'
 import FormAkun from './pages/admin/FormAkun'
+import DataAsrama from './pages/admin/DataAsrama'
+import DetailAsrama from './pages/admin/DetailAsrama'
+import Laporan from './pages/Laporan'
 
 // Halaman yang hanya boleh dibuka role tertentu
 function Only({ roles, children }) {
@@ -54,6 +57,9 @@ export default function App() {
         <Route path="/perizinan/:id" element={<DetailIzin />} />
 
         <Route path="/data-presensi" element={<Only roles={['fasil', 'admin']}><DataPresensi /></Only>} />
+        <Route path="/laporan" element={<Only roles={['fasil', 'admin']}><Laporan /></Only>} />
+        <Route path="/asrama" element={<Only roles={['admin']}><DataAsrama /></Only>} />
+        <Route path="/asrama/:id" element={<Only roles={['admin']}><DetailAsrama /></Only>} />
 
         <Route path="/penghuni" element={<Only roles={['admin']}><DataAkun key="penghuni" role="penghuni" /></Only>} />
         <Route path="/penghuni/tambah" element={<Only roles={['admin']}><FormAkun key="penghuni" role="penghuni" /></Only>} />

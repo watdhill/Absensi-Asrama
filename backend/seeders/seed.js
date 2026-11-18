@@ -4,7 +4,7 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
-const { sequelize, Asrama, User, Presensi, Izin } = require('../models');
+const { sequelize, Asrama, Kamar, User, Presensi, Izin } = require('../models');
 const SESI = require('../config/sesi');
 const { SESI_KEYS, sekarang, statusSesi, geserTanggal, rentangTanggal } = require('../utils/waktu');
 const { UPLOAD_DIR } = require('../middlewares/upload');
@@ -32,6 +32,15 @@ const PENGHUNI = [
   ['2210422027', 'Aulia Rahma', 'P', 'Akuntansi', 'Ekonomi dan Bisnis', 'C', 'C-301'],
   ['2311521033', 'Salsabila Zahra', 'P', 'Sistem Informasi', 'Teknologi Informasi', 'C', 'C-304'],
   ['2210312011', 'Intan Permata Sari', 'P', 'Kesehatan Masyarakat', 'Kesehatan Masyarakat', 'C', 'C-308'],
+  // A-203 terisi penuh (4/4) sebagai contoh kamar penuh
+  ['2311522019', 'Farhan Maulana', 'L', 'Informatika', 'Teknologi Informasi', 'A', 'A-203'],
+  ['2210612008', 'Rizky Ramadhan', 'L', 'Teknik Mesin', 'Teknik', 'A', 'A-203'],
+  ['2311013027', 'Putri Ayu Lestari', 'P', 'Farmasi', 'Farmasi', 'D', 'D-101'],
+  ['2210423015', 'Rani Oktaviani', 'P', 'Akuntansi', 'Ekonomi dan Bisnis', 'E', 'E-205'],
+  ['2311112031', 'Dinda Maharani', 'P', 'Kedokteran', 'Kedokteran', 'F', 'F-110'],
+  // mahasiswa asing di asrama internasional
+  ['2311524041', 'Muhammad Hafiz bin Ismail', 'L', 'Sistem Informasi', 'Teknologi Informasi', 'I', 'I-101'],
+  ['2311525042', 'Nguyen Thi Lan', 'P', 'Manajemen', 'Ekonomi dan Bisnis', 'I', 'I-201'],
 ];
 
 // ---- file bukti contoh -------------------------------------------------
@@ -117,25 +126,53 @@ function simpanBukti(nama, buffer, tipe) {
 const detikKeJam = (d) =>
   [Math.floor(d / 3600), Math.floor((d % 3600) / 60), d % 60].map((n) => String(n).padStart(2, '0')).join(':');
 
+// Nama file upload yang dirujuk database saat ini (kosong kalau tabel belum ada)
+async function fileTerpakai() {
+  try {
+    const [rows] = await sequelize.query(
+      'SELECT foto AS f FROM "Presensi" WHERE foto IS NOT NULL UNION ALL SELECT "buktiFile" FROM "Izin"'
+    );
+    return rows.map((r) => r.f);
+  } catch {
+    return [];
+  }
+}
+
 async function seed() {
   const now = sekarang();
   const awal = geserTanggal(now.tanggal, -HARI_RIWAYAT);
+  const fileLama = await fileTerpakai();
 
   // tabel contoh lama (Users & Tasks) dari template awal ikut dibersihkan
   await sequelize.query('DROP TABLE IF EXISTS "Tasks" CASCADE');
   await sequelize.sync({ force: true });
-  // foto presensi lama ikut dihapus karena tabel Presensi dikosongkan
-  for (const f of fs.readdirSync(UPLOAD_DIR)) {
-    if (f.startsWith('seed-') || f.startsWith('presensi-')) fs.rmSync(path.join(UPLOAD_DIR, f));
+  // File upload milik database INI (foto presensi & bukti izin) ikut dihapus karena
+  // tabelnya dikosongkan. Folder uploads/ bisa dipakai bersama database lain
+  // (misal database tes), jadi yang dihapus hanya file yang dirujuk database ini.
+  for (const f of fileLama) {
+    if (!f.startsWith('seed-')) fs.rmSync(path.join(UPLOAD_DIR, path.basename(f)), { force: true });
   }
 
+  // Koordinat di bawah hanya PERKIRAAN di sekitar kampus Limau Manis.
+  // Titik sebenarnya diatur admin di halaman Asrama (tombol "Pakai lokasi saya").
   const asrama = {};
-  for (const [kode, nama, jenis] of [
-    ['A', 'Asrama Putra A', 'putra'],
-    ['B', 'Asrama Putra B', 'putra'],
-    ['C', 'Asrama Putri C', 'putri'],
+  for (const [kode, nama, jenis, latitude, longitude] of [
+    // 2 gedung putra, 4 gedung putri, 1 gedung internasional
+    ['A', 'Asrama Putra A', 'putra', -0.9133, 100.4605],
+    ['B', 'Asrama Putra B', 'putra', -0.9137, 100.4611],
+    ['C', 'Asrama Putri C', 'putri', -0.9141, 100.4598],
+    ['D', 'Asrama Putri D', 'putri', -0.9145, 100.4603],
+    ['E', 'Asrama Putri E', 'putri', -0.9149, 100.4608],
+    ['F', 'Asrama Putri F', 'putri', -0.9153, 100.4613],
+    ['I', 'Asrama Internasional', 'internasional', -0.9128, 100.4596],
   ]) {
-    asrama[kode] = await Asrama.create({ kode, nama, jenis });
+    asrama[kode] = await Asrama.create({ kode, nama, jenis, latitude, longitude, radius: 200 });
+    // kamar: lantai 1–3, nomor 01–10 (A-101 ... A-310), kapasitas 4
+    const kamar = [];
+    for (let l = 1; l <= 3; l++) {
+      for (let n = 1; n <= 10; n++) kamar.push({ asramaId: asrama[kode].id, nomor: `${kode}-${l}${String(n).padStart(2, '0')}`, lantai: l, kapasitas: 4 });
+    }
+    await Kamar.bulkCreate(kamar);
   }
 
   await User.create({ name: 'Admin Asrama', email: 'admin@unand.ac.id', password: PASSWORD, role: 'admin', nomorInduk: 'ADM001' });
@@ -145,6 +182,10 @@ async function seed() {
     ['A', '198805122015041001', 'Hendra Saputra', 'hendra.fasil@unand.ac.id', '081266001122'],
     ['B', '199002182018031002', 'Rudi Hartono', 'rudi.fasil@unand.ac.id', '081374002233'],
     ['C', '199106252019032001', 'Siti Rahmawati', 'siti.fasil@unand.ac.id', '085263003344'],
+    ['D', '199203142019032002', 'Dewi Anggraini', 'dewi.fasil@unand.ac.id', '085274004455'],
+    ['E', '199308092020122001', 'Rina Marlina', 'rina.fasil@unand.ac.id', '081363005566'],
+    ['F', '199401272020122002', 'Yuliana Putri', 'yuliana.fasil@unand.ac.id', '082284006677'],
+    ['I', '198912032016041001', 'Andre Wijaya', 'andre.fasil@unand.ac.id', '081277007788'],
   ]) {
     fasil[kode] = await User.create({ name, email, password: PASSWORD, role: 'fasil', nomorInduk: nip, telepon, asramaId: asrama[kode].id });
   }
@@ -228,10 +269,12 @@ async function seed() {
   }
   await Presensi.bulkCreate(rows);
 
-  console.log(`Seed selesai: ${PENGHUNI.length} penghuni, 3 fasil, 1 admin, ${rows.length} presensi, ${izinData.length} izin.`);
+  console.log(
+    `Seed selesai: ${Object.keys(asrama).length} gedung, ${PENGHUNI.length} penghuni, ${Object.keys(fasil).length} fasil, 1 admin, ${rows.length} presensi, ${izinData.length} izin.`
+  );
   console.log(`Password semua akun: ${PASSWORD}`);
   console.log('  Penghuni : 2311523012 (Rahil Akram)');
-  console.log('  Fasil    : hendra.fasil@unand.ac.id (Asrama Putra A)');
+  console.log('  Fasil    : hendra.fasil@unand.ac.id (Asrama Putra A), lainnya <nama>.fasil@unand.ac.id');
   console.log('  Admin    : admin@unand.ac.id');
 }
 

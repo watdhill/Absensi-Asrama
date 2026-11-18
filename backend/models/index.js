@@ -4,8 +4,13 @@ const User = require('./User');
 const Presensi = require('./Presensi');
 const KoreksiPresensi = require('./KoreksiPresensi');
 const Izin = require('./Izin');
+const Kamar = require('./Kamar');
 
 // RELASI antar tabel (setara foreign key di SQL)
+
+// 1 gedung punya banyak kamar
+Asrama.hasMany(Kamar, { foreignKey: 'asramaId', onDelete: 'CASCADE' });
+Kamar.belongsTo(Asrama, { foreignKey: 'asramaId' });
 
 // penghuni & fasil terdaftar di satu asrama
 Asrama.hasMany(User, { foreignKey: 'asramaId' });
@@ -24,4 +29,4 @@ User.hasMany(Izin, { foreignKey: 'userId', onDelete: 'CASCADE' });
 Izin.belongsTo(User, { as: 'penghuni', foreignKey: 'userId' });
 Izin.belongsTo(User, { as: 'reviewer', foreignKey: 'reviewedBy' });
 
-module.exports = { sequelize, Asrama, User, Presensi, KoreksiPresensi, Izin };
+module.exports = { sequelize, Asrama, Kamar, User, Presensi, KoreksiPresensi, Izin };

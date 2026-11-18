@@ -75,10 +75,25 @@ async function request(path, { method = 'GET', body, query } = {}) {
 
 // File bukti butuh header Authorization, jadi tidak bisa langsung dipakai di <img src>.
 // Diambil sebagai blob lalu dibuat object URL.
-async function blob(path) {
-  const res = await fetch(buildUrl(path), { headers: { Authorization: `Bearer ${getToken()}` } });
-  if (!res.ok) throw new Error('File tidak dapat dibuka');
+async function blob(path, query) {
+  const res = await fetch(buildUrl(path, query), { headers: { Authorization: `Bearer ${getToken()}` } });
+  if (!res.ok) {
+    const json = await res.json().catch(() => null);
+    throw new Error(json?.message || 'File tidak dapat dibuka');
+  }
   return res.blob();
+}
+
+// Unduh file (misal export Excel) lewat tautan sementara
+async function unduh(path, query, namaFile) {
+  const url = URL.createObjectURL(await blob(path, query));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = namaFile;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export const api = {
@@ -86,5 +101,7 @@ export const api = {
   post: (path, body) => request(path, { method: 'POST', body }),
   put: (path, body) => request(path, { method: 'PUT', body }),
   patch: (path, body) => request(path, { method: 'PATCH', body }),
+  del: (path) => request(path, { method: 'DELETE' }),
   blob,
+  unduh,
 };

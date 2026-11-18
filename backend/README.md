@@ -44,7 +44,41 @@ Akun hasil seed, semua dengan password `password123`:
 | Penghuni | `2311523012` (NIM) atau emailnya |
 | Fasil Asrama Putra A | `hendra.fasil@unand.ac.id` |
 | Fasil Asrama Putri C | `siti.fasil@unand.ac.id` |
+| Fasil gedung lain | `rudi` (B), `dewi` (D), `rina` (E), `yuliana` (F), `andre` (Internasional) + `.fasil@unand.ac.id` |
 | Admin | `admin@unand.ac.id` |
+
+## Gedung & kamar
+
+- 7 gedung: 2 putra (A, B), 4 putri (C–F), 1 internasional (I). Admin bisa
+  menambah/mengubah/menghapus gedung di menu **Gedung & Kamar**.
+- Gedung putra hanya untuk penghuni laki-laki, putri untuk perempuan;
+  internasional menerima keduanya, tetapi **satu kamar satu jenis kelamin**.
+- Kamar terdaftar di tabel `Kamar` (nomor diawali kode gedung, misal `A-203`),
+  dengan kapasitas per kamar (default 4). Penghuni hanya bisa ditempatkan di
+  kamar terdaftar yang belum penuh. Dicek saat tambah penghuni, pindah kamar,
+  dan mengaktifkan kembali penghuni. Seeder membuat lantai 1–3 nomor 01–10.
+- Kamar yang masih berpenghuni tidak bisa dihapus dan kapasitasnya tidak bisa
+  diturunkan di bawah jumlah penghuni; gedung yang masih punya penghuni/fasil
+  tidak bisa dihapus.
+
+## Lokasi presensi (geofence)
+
+- Setiap gedung punya titik `latitude`/`longitude` dan `radius` (meter). Penghuni
+  hanya bisa presensi dalam radius gedungnya; akurasi GPS diberi toleransi
+  maksimal 50 m. Jarak ke gedung disimpan di kolom `Presensi.jarak`.
+- Gedung tanpa koordinat tidak dibatasi lokasi.
+- Koordinat di seeder hanya **perkiraan** — atur titik sebenarnya di halaman
+  detail gedung (tombol "Pakai lokasi saya" saat berada di gedung).
+- Untuk tes dari luar asrama, isi `GEOFENCE=nonaktif` di `.env` lalu restart.
+
+## Laporan
+
+- Menu **Laporan** (fasil & admin): rekap bulanan per penghuni — hadir, izin,
+  tidak hadir, persentase kehadiran (hadir ÷ total sesi tercatat). Penghuni di
+  bawah 75% ditandai.
+- Export Excel berisi sheet **Rekap** dan **Detail Harian** (H/I/T per tanggal
+  & sesi); tombol **Cetak / PDF** memakai tampilan cetak browser.
+- Fasil hanya melihat rekap gedungnya sendiri.
 
 ## Aturan presensi
 
@@ -59,6 +93,10 @@ Akun hasil seed, semua dengan password `password123`:
 - Presensi wajib menyertakan foto dari kamera dan lokasi GPS. Jam, tanggal, dan
   sesi diambil dari server; frontend mencetak info tersebut beserta koordinat
   di bagian bawah foto.
+- Penghuni yang belum presensi (dan tidak sedang izin) mendapat pengingat di
+  notifikasi: 30 menit sebelum sesi dibuka, selama sesi dibuka (dengan sisa
+  waktu), dan pengingat mendesak saat sisa 15 menit atau kurang
+  (`controllers/notifikasiController.js`).
 - Koreksi oleh fasil wajib menyertakan alasan dan dicatat di tabel `KoreksiPresensi`.
 - Fasil hanya melihat dan mengoreksi penghuni di asramanya sendiri.
 
@@ -89,7 +127,15 @@ Semua endpoint selain login membutuhkan header `Authorization: Bearer <token>`.
 | GET/PUT | `/api/penghuni/:id` | admin | detail / ubah |
 | PATCH | `/api/penghuni/:id/status` | admin | `{ status: 'aktif' \| 'nonaktif' }` |
 | * | `/api/fasil...` | admin | sama seperti `/api/penghuni` |
-| GET | `/api/asrama` | semua | daftar gedung asrama |
+| GET | `/api/asrama` | semua | daftar gedung + jumlah penghuni, kamar, kapasitas |
+| GET | `/api/asrama/:id` | semua | detail gedung |
+| POST | `/api/asrama` | admin | `{ nama, kode, jenis, latitude, longitude, radius }` |
+| PUT/DELETE | `/api/asrama/:id` | admin | ubah / hapus gedung (kosong) |
+| GET | `/api/asrama/:id/kamar` | admin | semua kamar + penghuninya |
+| POST | `/api/asrama/:id/kamar` | admin | `{ nomor, lantai, kapasitas }` atau massal `{ lantaiDari, lantaiSampai, nomorDari, nomorSampai, kapasitas }` |
+| PUT/DELETE | `/api/kamar/:id` | admin | ubah kapasitas/lantai, hapus kamar kosong |
+| GET | `/api/laporan/rekap?bulan=&asramaId=` | fasil, admin | rekap kehadiran bulanan |
+| GET | `/api/laporan/rekap/excel?bulan=&asramaId=` | fasil, admin | file Excel rekap |
 | GET | `/api/dashboard` | fasil, admin | statistik dashboard |
 | GET | `/api/notifikasi` | semua | notifikasi sesuai role |
 

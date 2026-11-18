@@ -1,29 +1,53 @@
 const { Op } = require('sequelize');
-const { User, Izin, Presensi } = require('../models');
+const { User, Izin } = require('../models');
 const SESI = require('../config/sesi');
-const { sekarang, sesiAktif } = require('../utils/waktu');
+const { SESI_KEYS, sekarang, sesiAktif, statusSesi } = require('../utils/waktu');
 const { muatStatus } = require('../utils/statusPresensi');
 
 const SEMINGGU = 7 * 24 * 3600 * 1000;
 
 // Notifikasi dihitung langsung dari data (tidak disimpan di tabel terpisah).
 // Setiap item punya `link` ke halaman frontend yang relevan.
+// Pengingat presensi untuk penghuni yang belum presensi (dan tidak sedang izin):
+// mulai 30 menit sebelum sesi dibuka, selama sesi dibuka, dan lebih mendesak
+// saat sisa waktunya 15 menit atau kurang.
+const PENGINGAT_SEBELUM = 30 * 60;
+const HAMPIR_DITUTUP = 15 * 60;
+
+async function pengingatPresensi(user, now) {
+  const lookup = await muatStatus([user.id], now.tanggal, now.tanggal, now);
+  const list = [];
+  for (const sesi of SESI_KEYS) {
+    if (lookup(user.id, now.tanggal, sesi).status !== 'belum') continue;
+    const { label, mulai, selesai, mulaiDetik, selesaiDetik } = SESI[sesi];
+    const state = statusSesi(sesi, now);
+
+    if (state === 'dibuka') {
+      const sisa = selesaiDetik - now.detik;
+      const mendesak = sisa <= HAMPIR_DITUTUP;
+      list.push({
+        id: `pengingat-${sesi}`,
+        jenis: mendesak ? 'bahaya' : 'peringatan',
+        judul: mendesak ? 'Segera presensi! Sesi hampir ditutup' : 'Jangan lupa presensi',
+        pesan: `${label} dibuka sampai ${selesai} WIB • sisa ${Math.ceil(sisa / 60)} menit`,
+        link: '/presensi',
+      });
+    } else if (state === 'belum_dibuka' && mulaiDetik - now.detik <= PENGINGAT_SEBELUM) {
+      list.push({
+        id: `pengingat-${sesi}`,
+        jenis: 'info',
+        judul: 'Presensi segera dibuka',
+        pesan: `${label} dibuka pukul ${mulai} WIB. Jangan lupa presensi ya!`,
+        link: '/presensi',
+      });
+    }
+  }
+  return list;
+}
+
 const builders = {
   async penghuni(user, now) {
-    const list = [];
-    const sesi = sesiAktif(now);
-    if (sesi) {
-      const sudah = await Presensi.findOne({ where: { userId: user.id, tanggal: now.tanggal, sesi } });
-      if (!sudah) {
-        list.push({
-          id: `presensi-${sesi}`,
-          jenis: 'peringatan',
-          judul: 'Presensi belum dilakukan',
-          pesan: `${SESI[sesi].label} dibuka sampai ${SESI[sesi].selesai} WIB`,
-          link: '/presensi',
-        });
-      }
-    }
+    const list = await pengingatPresensi(user, now);
     const diputuskan = await Izin.findAll({
       where: { userId: user.id, status: { [Op.ne]: 'menunggu' }, reviewedAt: { [Op.gte]: new Date(Date.now() - SEMINGGU) } },
       order: [['reviewedAt', 'DESC']],
