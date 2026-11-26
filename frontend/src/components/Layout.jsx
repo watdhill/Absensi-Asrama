@@ -47,6 +47,7 @@ const NAV = {
     { to: '/fasil', label: 'Fasil', icon: UserCog },
     { to: '/asrama', label: 'Gedung & Kamar', icon: Building2 },
     { to: '/data-presensi', label: 'Presensi', icon: ClipboardCheck },
+    { to: '/perizinan', label: 'Perizinan', icon: FileText },
     { to: '/laporan', label: 'Laporan', icon: FileSpreadsheet },
   ],
 };

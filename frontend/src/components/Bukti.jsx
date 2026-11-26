@@ -76,7 +76,7 @@ export function FileUpload({ value, onChange, error, onError }) {
           <span style={{ color: 'var(--primary-2)' }}>Upload Bukti</span> atau seret file ke sini
         </div>
         <div className="field-hint" style={{ marginTop: 4 }}>
-          Format JPG atau PDF • Maksimal 5 MB
+          Format JPG, PNG, atau PDF • Maksimal 5 MB
         </div>
       </div>
       <input

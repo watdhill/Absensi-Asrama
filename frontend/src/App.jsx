@@ -12,10 +12,13 @@ import DataPresensi from './pages/fasil/DataPresensi'
 import DashboardAdmin from './pages/admin/Dashboard'
 import DataAkun from './pages/admin/DataAkun'
 import FormAkun from './pages/admin/FormAkun'
+import PerizinanPenghuni from './pages/penghuni/Perizinan'
+import AjukanIzin from './pages/penghuni/AjukanIzin'
+import PerizinanFasil from './pages/fasil/Perizinan'
+import DetailIzin from './pages/DetailIzin'
 import DalamPengembangan from './components/DalamPengembangan'
 
-// Modul yang sedang dikerjakan ulang (Perizinan, Laporan, Gedung & Kamar)
-const perizinan = <DalamPengembangan title="Perizinan" subtitle="Pengajuan dan persetujuan izin penghuni" />
+// Modul yang sedang dikerjakan ulang (Laporan, Gedung & Kamar)
 const laporan = <DalamPengembangan title="Laporan Kehadiran" subtitle="Rekap kehadiran bulanan penghuni" />
 const asrama = <DalamPengembangan title="Gedung & Kamar" subtitle="Kelola gedung asrama dan kamar" />
 
@@ -51,7 +54,12 @@ export default function App() {
 
         <Route path="/presensi" element={<Only roles={['penghuni']}><Presensi /></Only>} />
         <Route path="/riwayat" element={<Only roles={['penghuni']}><Riwayat /></Only>} />
-        <Route path="/perizinan/*" element={perizinan} />
+        <Route
+          path="/perizinan"
+          element={<PerRole penghuni={<PerizinanPenghuni />} fasil={<PerizinanFasil />} admin={<PerizinanFasil />} />}
+        />
+        <Route path="/perizinan/ajukan" element={<Only roles={['penghuni']}><AjukanIzin /></Only>} />
+        <Route path="/perizinan/:id" element={<DetailIzin />} />
 
         <Route path="/data-presensi" element={<Only roles={['fasil', 'admin']}><DataPresensi /></Only>} />
         <Route path="/laporan" element={<Only roles={['fasil', 'admin']}>{laporan}</Only>} />
