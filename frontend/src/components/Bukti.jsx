@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { Eye, FileImage, FileText, Upload, X } from 'lucide-react';
 import { api } from '../api';
 import { tipeFile, ukuranFile } from '../lib/format';
-import { Loading, Modal } from './ui';
 
 const MAX_UKURAN = 5 * 1024 * 1024;
 const TIPE_OK = ['image/jpeg', 'image/png', 'application/pdf'];
@@ -115,30 +114,4 @@ export function useBlobUrl(path, aktif = true) {
     };
   }, [path, aktif]);
   return state;
-}
-
-export function BuktiPreview({ izin, aktif = true }) {
-  const { url, error } = useBlobUrl(`/izin/${izin.id}/bukti`, aktif);
-  const pdf = izin.buktiTipe?.includes('pdf');
-  return (
-    <div className="preview-frame">
-      {error ? (
-        <div className="muted">{error}</div>
-      ) : !url ? (
-        <Loading text="Memuat dokumen..." />
-      ) : pdf ? (
-        <iframe src={url} title={izin.buktiNama} />
-      ) : (
-        <img src={url} alt={`Bukti izin ${izin.buktiNama}`} />
-      )}
-    </div>
-  );
-}
-
-export function BuktiModal({ izin, open, onClose }) {
-  return (
-    <Modal open={open} onClose={onClose} title="Bukti Izin" size="xl" subtitle={izin && `${izin.buktiNama} • ${tipeFile(izin.buktiTipe)} • ${ukuranFile(izin.buktiUkuran)}`}>
-      {izin && <BuktiPreview izin={izin} aktif={open} />}
-    </Modal>
-  );
 }

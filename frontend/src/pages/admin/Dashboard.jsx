@@ -6,7 +6,7 @@ import { hariTanggal, JENIS_ASRAMA } from '../../lib/format';
 import { ErrorBox, Loading, PageHead, StatCard } from '../../components/ui';
 import { RekapSesi } from '../fasil/Dashboard';
 
-import { JENIS_TONE } from './DataAsrama';
+import { JENIS_TONE } from './config';
 
 const AKSES = [
   { to: '/penghuni', icon: Users, title: 'Kelola Penghuni', desc: 'Tambah, ubah, dan nonaktifkan data penghuni asrama' },

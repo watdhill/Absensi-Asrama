@@ -16,3 +16,6 @@ export const AKUN = {
     filters: ['asramaId', 'status'],
   },
 };
+
+// Warna badge untuk jenis gedung asrama
+export const JENIS_TONE = { putra: 'info', putri: 'warning', internasional: 'success' };

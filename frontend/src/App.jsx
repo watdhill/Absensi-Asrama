@@ -4,21 +4,20 @@ import Layout from './components/Layout'
 import { Loading } from './components/ui'
 import Login from './pages/Login'
 import Profile from './pages/Profile'
-import DetailIzin from './pages/DetailIzin'
 import DashboardPenghuni from './pages/penghuni/Dashboard'
 import Presensi from './pages/penghuni/Presensi'
 import Riwayat from './pages/penghuni/Riwayat'
-import PerizinanPenghuni from './pages/penghuni/Perizinan'
-import AjukanIzin from './pages/penghuni/AjukanIzin'
 import DashboardFasil from './pages/fasil/Dashboard'
 import DataPresensi from './pages/fasil/DataPresensi'
-import PerizinanFasil from './pages/fasil/Perizinan'
 import DashboardAdmin from './pages/admin/Dashboard'
 import DataAkun from './pages/admin/DataAkun'
 import FormAkun from './pages/admin/FormAkun'
-import DataAsrama from './pages/admin/DataAsrama'
-import DetailAsrama from './pages/admin/DetailAsrama'
-import Laporan from './pages/Laporan'
+import DalamPengembangan from './components/DalamPengembangan'
+
+// Modul yang sedang dikerjakan ulang (Perizinan, Laporan, Gedung & Kamar)
+const perizinan = <DalamPengembangan title="Perizinan" subtitle="Pengajuan dan persetujuan izin penghuni" />
+const laporan = <DalamPengembangan title="Laporan Kehadiran" subtitle="Rekap kehadiran bulanan penghuni" />
+const asrama = <DalamPengembangan title="Gedung & Kamar" subtitle="Kelola gedung asrama dan kamar" />
 
 // Halaman yang hanya boleh dibuka role tertentu
 function Only({ roles, children }) {
@@ -52,14 +51,11 @@ export default function App() {
 
         <Route path="/presensi" element={<Only roles={['penghuni']}><Presensi /></Only>} />
         <Route path="/riwayat" element={<Only roles={['penghuni']}><Riwayat /></Only>} />
-        <Route path="/perizinan" element={<PerRole penghuni={<PerizinanPenghuni />} fasil={<PerizinanFasil />} admin={<PerizinanFasil />} />} />
-        <Route path="/perizinan/ajukan" element={<Only roles={['penghuni']}><AjukanIzin /></Only>} />
-        <Route path="/perizinan/:id" element={<DetailIzin />} />
+        <Route path="/perizinan/*" element={perizinan} />
 
         <Route path="/data-presensi" element={<Only roles={['fasil', 'admin']}><DataPresensi /></Only>} />
-        <Route path="/laporan" element={<Only roles={['fasil', 'admin']}><Laporan /></Only>} />
-        <Route path="/asrama" element={<Only roles={['admin']}><DataAsrama /></Only>} />
-        <Route path="/asrama/:id" element={<Only roles={['admin']}><DetailAsrama /></Only>} />
+        <Route path="/laporan" element={<Only roles={['fasil', 'admin']}>{laporan}</Only>} />
+        <Route path="/asrama/*" element={<Only roles={['admin']}>{asrama}</Only>} />
 
         <Route path="/penghuni" element={<Only roles={['admin']}><DataAkun key="penghuni" role="penghuni" /></Only>} />
         <Route path="/penghuni/tambah" element={<Only roles={['admin']}><FormAkun key="penghuni" role="penghuni" /></Only>} />
